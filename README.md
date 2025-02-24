@@ -8,7 +8,7 @@ To use, make sure that you have the following dependencies:
 - Requests: pip install requests
 - ffmpeg on your terminal (this script uses it to stitch together the stream files)
 
-*Mild Warning:* The downloaded files will be LARGE. If you're downloading a 1:30hr game at 1080p, expect around a 7 gig file, and make sure you have double that free at least. 
+*Mild Warning:* The downloaded files will be LARGE. If you're downloading a 1:30hr game at 1080p, expect around a 7Gb, and make sure you have double that free at least to process the temporary transport stream files. 
 
 ---
 
