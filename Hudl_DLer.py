@@ -176,7 +176,7 @@ if __name__ == "__main__":
   download_resolution = 270 
   game_code1 = "sn-xsk0y3sq"
   game_code2 = "f4293a83"
-  download_name = "test_menlo"
+  download_name = "Menlo" # Purely the name of your resulting download. Mine would be Menlo_720.mp4
   end_index = 639 # specific to each recording too. go to end and see what the index at the end is.
   ### CHANGES OVER
 
