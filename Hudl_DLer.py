@@ -1,17 +1,7 @@
-
-
-
-
-# https://di2g5yar1p6ph.cloudfront.net/sn-xsk0y3sq/270p.hls/media-f4293a83_b360800_d10000_434.ts
-# https://di2g5yar1p6ph.cloudfront.net/sn-mtvcab8r/270p.hls/media-bd01acda_b360800_d10000_7.ts
-# https://di2g5yar1p6ph.cloudfront.net/sn-xsk0y3sq/540p-lo.hls/media-f4293a83_b1680800_d10000_444.ts
-# https://di2g5yar1p6ph.cloudfront.net/sn-xsk0y3sq/720p-2.5.hls/media-f4293a83_b2890800_d10000_430.ts
-# https://di2g5yar1p6ph.cloudfront.net/sn-xsk0y3sq/1080p30-6.0.hls/media-f4293a83_b6740800_d10000_385.ts
-
-
 import requests
 import os
 from concurrent.futures import ThreadPoolExecutor
+# from threading import Lock  
 import subprocess
 import time
 import random
@@ -43,6 +33,7 @@ class TSDownloader:
     self.max_delay = max_delay
     self.max_retries = max_retries
     self.last_request_time = 0
+    # self.lock = Lock()
     self.res_map_start = { # This specifies the paths resolution part
       270: "270p.hls",
       540: "540p-lo.hls",
@@ -62,16 +53,22 @@ class TSDownloader:
     return f"{self.base_url}/{self.res_map_start[self.resolution]}/media-{self.game_id2}_{self.res_map_end[self.resolution]}_d10000_{index}.ts"
   
   def wait_between_requests(self):
-    """Implement rate limiting with random delay"""
+    # with self.lock:
+    #   current_time = time.time()
+    #   elapsed = current_time - self.last_request_time
+    #   if elapsed < self.min_delay:
+    #       delay = max(self.min_delay - elapsed, 0) + random.uniform(0, self.max_delay - self.min_delay)
+    #       time.sleep(delay)
+    #   self.last_request_time = time.time()
     current_time = time.time()
     elapsed = current_time - self.last_request_time
     
     if elapsed < self.min_delay:
-      delay = random.uniform(self.min_delay, self.max_delay)
-      time.sleep(delay)
+        delay = random.uniform(self.min_delay, self.max_delay)
+        time.sleep(delay)
     
     self.last_request_time = time.time()
-  
+
   def download_file(self, index):
     """Download a single TS file with retries and rate limiting"""
     for attempt in range(self.max_retries):
@@ -88,10 +85,10 @@ class TSDownloader:
           print(f"{datetime.now().strftime('%H:%M:%S')} - Downloaded {filename}")
           return filename
         elif response.status_code == 429: # Too Many Requests
-          print(f"Rate limit hit, waiting longer before retry {attempt + 1}")
+          print(f"{index} - Rate limit hit, waiting longer before retry {attempt + 1}")
           time.sleep(random.uniform(5, 10)) # Longer wait on rate limit
         elif response.status_code == 403: # The file either doesn't exist or is restriced (Forbidden)
-          print(f"Forbidden from resource. Does it exist? Waiting longer before retry {attempt + 1}")
+          print(f"{index} - Forbidden from resource. Does it exist? Waiting longer before retry {attempt + 1}")
           time.sleep(random.uniform(5, 10)) # Longer wait on rate limit
         else:
           print(f"Failed to download index {index}: Status {response.status_code}")
@@ -137,6 +134,8 @@ class TSDownloader:
       '-f', 'concat',
       '-safe', '0',
       '-i', 'file_list.txt',
+      '-map', '0:v',  # Include video stream
+      '-map', '0:a',  # Include audio stream
       '-c', 'copy',
       output_filename
     ]
@@ -153,17 +152,18 @@ class TSDownloader:
       os.remove(file)
 
 # Example usage
-def download_game(game_id1, game_id2, resolution, file_name, end_index):
-  # https://di2g5yar1p6ph.cloudfront.net/sn-mtvcab8r/270p.hls/media-bd01acda_b360800_d10000_7.ts
+def download_game(game_id1, game_id2, resolution, file_name, start_index, end_index):
+  # https://di2g5yar1p6ph.cloudfront.net/sn-zpcczwe0/1080p60-6.0.hls/media-b933ecda_b6740800_d10000_9.ts
   base_url = f"https://di2g5yar1p6ph.cloudfront.net/{game_id1}"
   # Create downloader with conservative rate limiting
   downloader = TSDownloader(
     base_url,
     game_id2,
     resolution,
-    min_delay=2.0,  # Minimum 2 seconds between requests
-    max_delay=4.0,  # Maximum 4 seconds between requests
-    max_retries=3,   # Retry failed downloads up to 3 times
+    min_delay=1.5,  # Minimum 2 seconds between requests
+    max_delay=3.0,  # Maximum 4 seconds between requests
+    max_retries=3,   # Retry failed downloads up to 3 
+    start_index=start_index,
     end_index=end_index
   )
   downloader.download_all()
@@ -172,19 +172,20 @@ def download_game(game_id1, game_id2, resolution, file_name, end_index):
 if __name__ == "__main__":
   # Example: Download a specific game at 270p resolution
 
-  ### CHANGE THESE FOR EVERY GAME
-  download_resolution = 270 
-  game_code1 = "sn-xsk0y3sq"
-  game_code2 = "f4293a83"
-  download_name = "Menlo" # Purely the name of your resulting download. Mine would be Menlo_720.mp4
-  end_index = 639 # specific to each recording too. go to end and see what the index at the end is.
-  ### CHANGES OVER
 
+  ### CHANGE THESE FOR EVERY GAME
+  download_resolution = 270
+  game_code1 = "sn-zpcczwe0"
+  game_code2 = "b933ecda"
+  download_name = "Wildcats" # Purely the name of your resulting download. Mine would be Menlo_720.mp4
+  start_index = 0 # In my testing it usually doesn't start at 0. Don't be scared at the error on 0.
+  end_index = 15 # specific to each recording too. go to end and see what the index at the end is.
+  ### CHANGES OVER
 
 
   if (download_resolution not in {270, 540, 720, 1080}):
     print("Invalid resolution, must be 270, 540, 720, or 1080")
-    exit
+    exit()
 
 
-  download_game(game_code1, game_code2, download_resolution, download_name, end_index)
+  download_game(game_code1, game_code2, download_resolution, download_name, start_index, end_index)
